@@ -2,13 +2,14 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QProcess>
+#include <QDir>
+#include <QStandardPaths>
+#include <QProcessEnvironment>
 
-namespace Ui {
-class MainWindow;
-}
+namespace Ui { class MainWindow; }
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
@@ -17,13 +18,13 @@ public:
 
 private slots:
     void onCommandEntered(const QString &command);
+    void onProcessOutput();
+    void onProcessError(QProcess::ProcessError error);
+    void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
     Ui::MainWindow *ui;
-    void executeCommand(const QString &command);
-    void runLsCommand();
-    void runPwdCommand();
-    void runEchoCommand(const QString &command);
+    QProcess *m_process;
 };
 
 #endif // MAINWINDOW_H

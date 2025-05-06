@@ -1,28 +1,21 @@
 #include "terminaltextedit.h"
 #include <QKeyEvent>
 
-TerminalTextEdit::TerminalTextEdit(QWidget *parent)
-    : QTextEdit(parent)
-{
-}
+TerminalTextEdit::TerminalTextEdit(QWidget *parent) : QTextEdit(parent) {}
 
-void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
-{
+void TerminalTextEdit::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
-        QTextCursor cursor = this->textCursor();
-        cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
-        QString line = cursor.selectedText();
+        QTextCursor cursor = textCursor();
+        cursor.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
+        QString command = cursor.selectedText().replace(">>> ", "").trimmed();
 
-        QString command = line;
-        if (command.startsWith(">>> ")) {
-            command = command.mid(4);
+        if (!command.isEmpty()) {
+            emit commandEntered(command);
         }
 
-        emit commandEntered(command);
-
-        QTextEdit::keyPressEvent(event);
-
-        this->append(">>> ");
+        cursor.movePosition(QTextCursor::EndOfLine);
+        setTextCursor(cursor);
+        append(">>> ");
     } else {
         QTextEdit::keyPressEvent(event);
     }

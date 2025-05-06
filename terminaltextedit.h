@@ -3,9 +3,9 @@
 
 #include <QTextEdit>
 
-class TerminalTextEdit : public QTextEdit
-{
+class TerminalTextEdit : public QTextEdit {
     Q_OBJECT
+
 public:
     explicit TerminalTextEdit(QWidget *parent = nullptr);
 

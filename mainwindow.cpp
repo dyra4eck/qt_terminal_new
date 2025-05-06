@@ -2,100 +2,82 @@
 #include "ui_mainwindow.h"
 #include "terminaltextedit.h"
 #include <QTextCursor>
-#include <memory>
-#include <array>
+#include <QDebug>
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
-{
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
-
-    // Заменяем QTextEdit на наш TerminalTextEdit
     TerminalTextEdit *terminal = new TerminalTextEdit(this);
     setCentralWidget(terminal);
 
-    // Начальная строка для ввода
-    terminal->append(">>> ");
+    m_process = new QProcess(this);
+    m_process->setProcessChannelMode(QProcess::MergedChannels);
 
-    // Соединяем сигнал команды с обработчиком
+    // Настройка переменных окружения
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert("PATH", env.value("PATH") + ":/bin:/usr/bin");
+    m_process->setProcessEnvironment(env);
+
     connect(terminal, &TerminalTextEdit::commandEntered, this, &MainWindow::onCommandEntered);
+    connect(m_process, &QProcess::readyReadStandardOutput, this, &MainWindow::onProcessOutput);
+    connect(m_process, &QProcess::errorOccurred, this, &MainWindow::onProcessError);
+    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &MainWindow::onProcessFinished);
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
+    delete m_process;
 }
 
-void MainWindow::onCommandEntered(const QString &command)
-{
-    executeCommand(command);
-}
+void MainWindow::onCommandEntered(const QString &command) {
+    if (command.trimmed().isEmpty()) return;
 
-void MainWindow::executeCommand(const QString &command)
-{
-    std::string cmd = command.toStdString();
-
-    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit *>(centralWidget());
-
-    if (cmd == "ls") {
-        runLsCommand();
-    } else if (cmd == "pwd") {
-        runPwdCommand();
-    } else if (cmd.substr(0, 4) == "echo") {
-        runEchoCommand(command);
-    } else {
-        terminal->append("Unknown command: " + command);
-    }
-}
-
-void MainWindow::runLsCommand()
-{
-    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit *>(centralWidget());
-
-    std::array<char, 128> buffer;
-    std::string result;
-    std::shared_ptr<FILE> pipe(popen("ls", "r"), pclose);
-
-    if (!pipe) {
-        terminal->append("Failed to run command 'ls'");
+    // Обработка команды cd
+    if (command.startsWith("cd ")) {
+        QString newDir = command.section(' ', 1, -1).trimmed();
+        QDir dir(newDir);
+        if (dir.exists()) {
+            QDir::setCurrent(newDir);
+            TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
+            terminal->append("Current directory: " + QDir::currentPath());
+        } else {
+            TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
+            terminal->append("cd: no such directory: " + newDir);
+        }
         return;
     }
 
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result += buffer.data();
-    }
+    // Разделение команды на части
+    QStringList parts = command.split(" ", Qt::SkipEmptyParts);
+    if (parts.isEmpty()) return;
 
-    terminal->append(QString::fromStdString(result));
-}
-
-void MainWindow::runPwdCommand()
-{
-    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit *>(centralWidget());
-
-    std::array<char, 128> buffer;
-    std::string result;
-    std::shared_ptr<FILE> pipe(popen("pwd", "r"), pclose);
-
-    if (!pipe) {
-        terminal->append("Failed to run command 'pwd'");
+    // Поиск исполняемого файла
+    QString program = parts[0];
+    QString fullPath = QStandardPaths::findExecutable(program);
+    if (fullPath.isEmpty()) {
+        TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
+        terminal->append("Command not found: " + program);
         return;
     }
 
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result += buffer.data();
-    }
-
-    terminal->append(QString::fromStdString(result));
+    // Запуск процесса
+    m_process->setWorkingDirectory(QDir::currentPath());
+    m_process->start(fullPath, parts.mid(1));
 }
 
-void MainWindow::runEchoCommand(const QString &command)
-{
-    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit *>(centralWidget());
+void MainWindow::onProcessOutput() {
+    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
+    terminal->append(m_process->readAllStandardOutput());
+}
 
-    QStringList parts = command.split(" ");
-    parts.removeAt(0);
-    QString output = parts.join(" ");
+void MainWindow::onProcessError(QProcess::ProcessError error) {
+    Q_UNUSED(error);
+    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
+    terminal->append("Error: " + m_process->errorString());
+}
 
-    terminal->append(output);
+void MainWindow::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+    Q_UNUSED(exitCode);
+    Q_UNUSED(exitStatus);
+    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
+    terminal->append(">>> ");
 }
