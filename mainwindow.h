@@ -2,29 +2,34 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QProcess>
-#include <QDir>
-#include <QStandardPaths>
-#include <QProcessEnvironment>
+#include <QTextEdit>
+#include <QLineEdit>
+#include <QStringList>
 
-namespace Ui { class MainWindow; }
+class Shell;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 private slots:
-    void onCommandEntered(const QString &command);
-    void onProcessOutput();
-    void onProcessError(QProcess::ProcessError error);
-    void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    void handleCommand();
 
 private:
-    Ui::MainWindow *ui;
-    QProcess *m_process;
+    void loadHistory();
+    void saveHistory();
+
+    QTextEdit *outputTextEdit;
+    QLineEdit *inputLineEdit;
+    Shell *shell;
+    QStringList commandHistory;
+    int historyIndex;
 };
 
 #endif // MAINWINDOW_H

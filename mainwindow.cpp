@@ -1,83 +1,98 @@
 #include "mainwindow.h"
-#include "ui_mainwindow.h"
-#include "terminaltextedit.h"
-#include <QTextCursor>
-#include <QDebug>
+#include "shell.h"
+#include <QVBoxLayout>
+#include <QFile>
+#include <QTextStream>
+#include <QKeyEvent>
+#include <QDir>
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
-    ui->setupUi(this);
-    TerminalTextEdit *terminal = new TerminalTextEdit(this);
-    setCentralWidget(terminal);
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent), historyIndex(-1) {
+    outputTextEdit = new QTextEdit(this);
+    outputTextEdit->setReadOnly(true);
+    inputLineEdit = new QLineEdit(this);
+    inputLineEdit->installEventFilter(this);
 
-    m_process = new QProcess(this);
-    m_process->setProcessChannelMode(QProcess::MergedChannels);
+    QVBoxLayout *layout = new QVBoxLayout;
+    layout->addWidget(outputTextEdit);
+    layout->addWidget(inputLineEdit);
 
-    // Настройка переменных окружения
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert("PATH", env.value("PATH") + ":/bin:/usr/bin");
-    m_process->setProcessEnvironment(env);
+    QWidget *centralWidget = new QWidget(this);
+    centralWidget->setLayout(layout);
+    setCentralWidget(centralWidget);
 
-    connect(terminal, &TerminalTextEdit::commandEntered, this, &MainWindow::onCommandEntered);
-    connect(m_process, &QProcess::readyReadStandardOutput, this, &MainWindow::onProcessOutput);
-    connect(m_process, &QProcess::errorOccurred, this, &MainWindow::onProcessError);
-    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &MainWindow::onProcessFinished);
+    shell = new Shell(outputTextEdit, this);
+    connect(inputLineEdit, &QLineEdit::returnPressed, this, &MainWindow::handleCommand);
+
+    loadHistory();
 }
 
 MainWindow::~MainWindow() {
-    delete ui;
-    delete m_process;
+    saveHistory();
+    delete shell;
 }
 
-void MainWindow::onCommandEntered(const QString &command) {
-    if (command.trimmed().isEmpty()) return;
-
-    // Обработка команды cd
-    if (command.startsWith("cd ")) {
-        QString newDir = command.section(' ', 1, -1).trimmed();
-        QDir dir(newDir);
-        if (dir.exists()) {
-            QDir::setCurrent(newDir);
-            TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
-            terminal->append("Current directory: " + QDir::currentPath());
-        } else {
-            TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
-            terminal->append("cd: no such directory: " + newDir);
+bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
+    if (obj == inputLineEdit && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Up) {
+            if (!commandHistory.isEmpty()) {
+                if (historyIndex < commandHistory.size() - 1) {
+                    historyIndex++;
+                }
+                inputLineEdit->setText(commandHistory[commandHistory.size() - 1 - historyIndex]);
+            }
+            return true;
+        } else if (keyEvent->key() == Qt::Key_Down) {
+            if (historyIndex > 0) {
+                historyIndex--;
+                inputLineEdit->setText(commandHistory[commandHistory.size() - 1 - historyIndex]);
+            } else if (historyIndex == 0) {
+                historyIndex = -1;
+                inputLineEdit->clear();
+            }
+            return true;
         }
-        return;
     }
+    return QMainWindow::eventFilter(obj, event);
+}
 
-    // Разделение команды на части
-    QStringList parts = command.split(" ", Qt::SkipEmptyParts);
-    if (parts.isEmpty()) return;
+void MainWindow::handleCommand() {
+    QString command = inputLineEdit->text().trimmed();
+    if (command.isEmpty()) return;
 
-    // Поиск исполняемого файла
-    QString program = parts[0];
-    QString fullPath = QStandardPaths::findExecutable(program);
-    if (fullPath.isEmpty()) {
-        TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
-        terminal->append("Command not found: " + program);
-        return;
+    if (commandHistory.isEmpty() || commandHistory.last() != command) {
+        commandHistory.append(command);
     }
+    historyIndex = -1;
 
-    // Запуск процесса
-    m_process->setWorkingDirectory(QDir::currentPath());
-    m_process->start(fullPath, parts.mid(1));
+    inputLineEdit->clear();
+    outputTextEdit->append("$ " + command);
+    shell->processCommand(command);
+
+    if (commandHistory.size() > 100) {
+        commandHistory.removeFirst();
+    }
 }
 
-void MainWindow::onProcessOutput() {
-    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
-    terminal->append(m_process->readAllStandardOutput());
+void MainWindow::loadHistory() {
+    QFile file(QDir::homePath() + "/.shmel_history");
+    if (file.open(QIODevice::ReadOnly)) {
+        QTextStream in(&file);
+        while (!in.atEnd()) {
+            commandHistory << in.readLine();
+        }
+        file.close();
+    }
 }
 
-void MainWindow::onProcessError(QProcess::ProcessError error) {
-    Q_UNUSED(error);
-    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
-    terminal->append("Error: " + m_process->errorString());
-}
-
-void MainWindow::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
-    Q_UNUSED(exitCode);
-    Q_UNUSED(exitStatus);
-    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
-    terminal->append(">>> ");
+void MainWindow::saveHistory() {
+    QFile file(QDir::homePath() + "/.shmel_history");
+    if (file.open(QIODevice::WriteOnly)) {
+        QTextStream out(&file);
+        for (const QString &cmd : commandHistory) {
+            out << cmd << "\n";
+        }
+        file.close();
+    }
 }

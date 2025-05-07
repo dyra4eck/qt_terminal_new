@@ -13,6 +13,7 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+<<<<<<< HEAD
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="">
     <property name="geometry">
@@ -34,6 +35,9 @@
     </layout>
    </widget>
   </widget>
+=======
+  <widget class="QWidget" name="centralwidget"/>
+>>>>>>> 4be83ae (Реализовал основные команды)
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
