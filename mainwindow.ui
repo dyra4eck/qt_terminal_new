@@ -5,63 +5,21 @@
             <property name="windowTitle">
                   <string>ShMEL Terminal</string>
             </property>
-            <property name="styleSheet">
-                  <string notr="true">background-color: black;</string>
-            </property>
             <widget class="QWidget" name="centralwidget">
                   <layout class="QVBoxLayout" name="verticalLayout">
                         <item>
-                              <widget class="QTextEdit" name="outputTextEdit">
+                              <widget class="QTextEdit" name="terminalEdit">
                                     <property name="styleSheet">
                                           <string notr="true">
                                                 background-color: black;
                                                 color: #00ff00;
-                                                border: none;
-                                                padding: 0;
-                                                margin: 0;
+                                                font-family: Monospace;
+                                                font-size: 10pt;
                                           </string>
-                                    </property>
-                                    <property name="font">
-                                          <font>
-                                                <family>Monospace</family>
-                                                <pointsize>10</pointsize>
-                                          </font>
-                                    </property>
-                                    <property name="readOnly">
-                                          <bool>true</bool>
-                                    </property>
-                                    <property name="verticalScrollBarPolicy">
-                                          <enum>Qt::ScrollBarAlwaysOn</enum>
-                                    </property>
-                              </widget>
-                        </item>
-                        <item>
-                              <widget class="QLineEdit" name="inputLineEdit">
-                                    <property name="styleSheet">
-                                          <string notr="true">
-                                                background-color: black;
-                                                color: white;
-                                                border: none;
-                                                padding: 0;
-                                                margin: 0;
-                                          </string>
-                                    </property>
-                                    <property name="font">
-                                          <font>
-                                                <family>Monospace</family>
-                                                <pointsize>10</pointsize>
-                                          </font>
-                                    </property>
-                                    <property name="frame">
-                                          <bool>false</bool>
                                     </property>
                               </widget>
                         </item>
                   </layout>
             </widget>
-            <widget class="QMenuBar" name="menubar"/>
-            <widget class="QStatusBar" name="statusbar"/>
       </widget>
-      <resources/>
-      <connections/>
 </ui>

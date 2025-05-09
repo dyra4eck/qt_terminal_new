@@ -27,6 +27,7 @@ private:
 
     QTextEdit* output;
     QMap<int, QPair<QProcess*, QString>> backgroundProcesses;
+    QProcess* currentProcess; // Добавлено поле
     int nextJobId;
 };
 

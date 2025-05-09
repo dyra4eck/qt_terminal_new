@@ -1,118 +1,37 @@
 #include "shell.h"
 #include <QDir>
-#include <QFileInfo>
-#include <QStandardPaths>
-#include <QProcessEnvironment>
 
 Shell::Shell(QTextEdit* output, QObject* parent)
-    : QObject(parent), output(output), nextJobId(1) {}
+    : QObject(parent), output(output), currentProcess(nullptr), nextJobId(1) {} // Инициализация currentProcess
 
 void Shell::processCommand(const QString& line) {
+    if (line.isEmpty()) return;
+
     QStringList tokens = line.split(" ", Qt::SkipEmptyParts);
     if (tokens.isEmpty()) return;
 
-    QString command = tokens.first();
-    if (command == "clear") {
-        output->clear();
-        return;
-    } else if (command == "cd") {
-        handleCd(tokens);
-    } else if (command == "jobs") {
-        listJobs();
-    } else if (command == "kill") {
-        handleKill(tokens);
-    } else {
-        bool background = tokens.last() == "&";
-        if (background) tokens.removeLast();
-        launchProcess(tokens, background);
-    }
-}
-
-void Shell::handleCd(const QStringList& tokens) {
-    if (tokens.size() == 1) {
-        QDir::setCurrent(QDir::homePath());
-    } else if (tokens.size() == 2) {
-        if (!QDir::setCurrent(tokens[1])) {
-            output->append("cd: " + tokens[1] + ": Нет такого файла или каталога");
-        }
-    } else {
-        output->append("cd: слишком много аргументов");
-    }
-}
-
-void Shell::listJobs() {
-    for (auto it = backgroundProcesses.begin(); it != backgroundProcesses.end(); ++it) {
-        output->append(QString("[%1] %2").arg(it.key()).arg(it.value().second));
-    }
-}
-
-void Shell::handleKill(const QStringList& tokens) {
-    if (tokens.size() != 2) {
-        output->append("kill: использование: kill <job_id>");
-        return;
-    }
-    bool ok;
-    int jobId = tokens[1].toInt(&ok);
-    if (!ok || !backgroundProcesses.contains(jobId)) {
-        output->append("kill: неверный job_id");
-        return;
-    }
-    QProcess* proc = backgroundProcesses[jobId].first;
-    proc->terminate();
-    backgroundProcesses.remove(jobId);
-}
-
-void Shell::launchProcess(const QStringList& tokens, bool background) {
-    QProcess* proc = new QProcess(this);
-    connect(proc, &QProcess::readyReadStandardOutput, this, &Shell::readOutput);
-    connect(proc, &QProcess::readyReadStandardError, this, &Shell::readError);
-    connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, &Shell::handleProcessFinished);
-
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert("TERM", "xterm");
-    proc->setProcessEnvironment(env);
-
-    QString program = tokens.first();
-    QStringList args = tokens.mid(1);
-
-    if (QFileInfo::exists(program) || QFileInfo::exists(QStandardPaths::findExecutable(program))) {
-        proc->start(program, args);
-    } else {
-        output->append("Ошибка: команда не найдена - " + program);
-        delete proc;
-        return;
+    if (currentProcess) {
+        currentProcess->kill();
+        currentProcess->deleteLater();
     }
 
-    if (background) {
-        backgroundProcesses[nextJobId++] = {proc, tokens.join(" ")};
-        output->append(QString("[%1] Запущен в фоне").arg(nextJobId - 1));
-    } else {
-        proc->waitForFinished();
-    }
+    currentProcess = new QProcess(this);
+    connect(currentProcess, &QProcess::readyReadStandardOutput, this, &Shell::readOutput);
+    connect(currentProcess, &QProcess::readyReadStandardError, this, &Shell::readError);
+    connect(currentProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Shell::handleProcessFinished);
+
+    currentProcess->start(tokens.first(), tokens.mid(1));
 }
 
 void Shell::readOutput() {
-    QProcess* proc = qobject_cast<QProcess*>(sender());
-    if (proc) {
-        QString outputText = QString::fromUtf8(proc->readAllStandardOutput()).toHtmlEscaped();
-        output->append("<span style='color:white'>" + outputText + "</span>");
-    }
+    output->append("<span style='color:white'>" + currentProcess->readAllStandardOutput() + "</span>");
 }
 
 void Shell::readError() {
-    QProcess* proc = qobject_cast<QProcess*>(sender());
-    if (proc) {
-        QString errorText = QString::fromUtf8(proc->readAllStandardError()).toHtmlEscaped();
-        output->append("<span style='color:red'>" + errorText + "</span>");
-    }
+    output->append("<span style='color:red'>" + currentProcess->readAllStandardError() + "</span>");
 }
 
 void Shell::handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
     Q_UNUSED(exitStatus);
-    QProcess* proc = qobject_cast<QProcess*>(sender());
-    if (proc) {
-        output->append(QString("Завершено с кодом: %1").arg(exitCode));
-        proc->deleteLater();
-    }
+    output->append(QString("Process exited with code: %1").arg(exitCode));
 }
