@@ -1,55 +1,75 @@
 #include "mainwindow.h"
 #include "shell.h"
-#include <QVBoxLayout>
+#include "ui_mainwindow.h"
 #include <QFile>
 #include <QTextStream>
 #include <QKeyEvent>
 #include <QDir>
+#include <QScrollBar>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), historyIndex(-1) {
-    outputTextEdit = new QTextEdit(this);
-    outputTextEdit->setReadOnly(true);
-    inputLineEdit = new QLineEdit(this);
-    inputLineEdit->installEventFilter(this);
+    : QMainWindow(parent), ui(new Ui::MainWindow), historyIndex(-1) {
+    ui->setupUi(this);
 
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->addWidget(outputTextEdit);
-    layout->addWidget(inputLineEdit);
+    // Настройка стилей
+    ui->centralwidget->setStyleSheet("background-color: black;");
+    ui->verticalLayout->setContentsMargins(0, 0, 0, 0);
+    ui->verticalLayout->setSpacing(0);
 
-    QWidget *centralWidget = new QWidget(this);
-    centralWidget->setLayout(layout);
-    setCentralWidget(centralWidget);
+    // Настройка вывода
+    ui->outputTextEdit->setReadOnly(true);
+    ui->outputTextEdit->setWordWrapMode(QTextOption::NoWrap);
+    ui->outputTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    ui->outputTextEdit->setTextInteractionFlags(Qt::TextSelectableByKeyboard | Qt::TextSelectableByMouse);
 
-    shell = new Shell(outputTextEdit, this);
-    connect(inputLineEdit, &QLineEdit::returnPressed, this, &MainWindow::handleCommand);
+    // Настройка ввода
+    ui->inputLineEdit->setFocus();
+    ui->inputLineEdit->setFrame(false);
+    ui->inputLineEdit->installEventFilter(this);
 
+    // Шрифт
+    QFont font("Monospace", 10);
+    ui->outputTextEdit->setFont(font);
+    ui->inputLineEdit->setFont(font);
+
+    // Инициализация оболочки
+    shell = new Shell(ui->outputTextEdit, this);
+    connect(ui->inputLineEdit, &QLineEdit::returnPressed, this, &MainWindow::handleCommand);
+
+    // Загрузка истории
     loadHistory();
+
+    // Приветственное сообщение
+    ui->outputTextEdit->append(
+        "<span style='color:#00ff00'>user@shmel:~$ </span>"
+        "<span style='color:white'>Terminal ready</span>"
+        );
 }
 
 MainWindow::~MainWindow() {
     saveHistory();
     delete shell;
+    delete ui;
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
-    if (obj == inputLineEdit && event->type() == QEvent::KeyPress) {
+    if (obj == ui->inputLineEdit && event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_Up) {
             if (!commandHistory.isEmpty()) {
                 if (historyIndex < commandHistory.size() - 1) {
                     historyIndex++;
                 }
-                inputLineEdit->setText(commandHistory[commandHistory.size() - 1 - historyIndex]);
+                ui->inputLineEdit->setText(commandHistory[commandHistory.size() - 1 - historyIndex]);
             }
             return true;
         } else if (keyEvent->key() == Qt::Key_Down) {
             if (historyIndex > 0) {
                 historyIndex--;
-                inputLineEdit->setText(commandHistory[commandHistory.size() - 1 - historyIndex]);
+                ui->inputLineEdit->setText(commandHistory[commandHistory.size() - 1 - historyIndex]);
             } else if (historyIndex == 0) {
                 historyIndex = -1;
-                inputLineEdit->clear();
+                ui->inputLineEdit->clear();
             }
             return true;
         }
@@ -58,18 +78,30 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
 }
 
 void MainWindow::handleCommand() {
-    QString command = inputLineEdit->text().trimmed();
+    QString command = ui->inputLineEdit->text().trimmed();
     if (command.isEmpty()) return;
 
+    // Добавление в историю
     if (commandHistory.isEmpty() || commandHistory.last() != command) {
         commandHistory.append(command);
     }
     historyIndex = -1;
 
-    inputLineEdit->clear();
-    outputTextEdit->append("$ " + command);
+    // Очистка и вывод команды
+    ui->inputLineEdit->clear();
+    ui->outputTextEdit->append(
+        "<span style='color:#00ff00'>user@shmel:~$ </span>"
+        "<span style='color:white'>" + command + "</span>"
+        );
+
+    // Обработка команды
     shell->processCommand(command);
 
+    // Автопрокрутка
+    QScrollBar *scrollBar = ui->outputTextEdit->verticalScrollBar();
+    scrollBar->setValue(scrollBar->maximum());
+
+    // Ограничение истории
     if (commandHistory.size() > 100) {
         commandHistory.removeFirst();
     }

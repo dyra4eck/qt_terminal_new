@@ -95,14 +95,16 @@ void Shell::launchProcess(const QStringList& tokens, bool background) {
 void Shell::readOutput() {
     QProcess* proc = qobject_cast<QProcess*>(sender());
     if (proc) {
-        output->append(proc->readAllStandardOutput());
+        QString outputText = QString::fromUtf8(proc->readAllStandardOutput()).toHtmlEscaped();
+        output->append("<span style='color:white'>" + outputText + "</span>");
     }
 }
 
 void Shell::readError() {
     QProcess* proc = qobject_cast<QProcess*>(sender());
     if (proc) {
-        output->append(proc->readAllStandardError());
+        QString errorText = QString::fromUtf8(proc->readAllStandardError()).toHtmlEscaped();
+        output->append("<span style='color:red'>" + errorText + "</span>");
     }
 }
 

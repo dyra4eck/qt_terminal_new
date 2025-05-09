@@ -2,9 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QTextEdit>
-#include <QLineEdit>
-#include <QStringList>
+#include "ui_mainwindow.h"
 
 class Shell;
 
@@ -12,7 +10,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 protected:
@@ -25,8 +23,7 @@ private:
     void loadHistory();
     void saveHistory();
 
-    QTextEdit *outputTextEdit;
-    QLineEdit *inputLineEdit;
+    Ui::MainWindow *ui;
     Shell *shell;
     QStringList commandHistory;
     int historyIndex;
