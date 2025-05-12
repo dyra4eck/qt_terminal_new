@@ -13,10 +13,7 @@ TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     setAcceptRichText(false);
     setCursorWidth(2);
 
-    QFont font("Monospace");
-    font.setStyleHint(QFont::TypeWriter);
-    setFont(font);
-
+    defaultCharFormat.setForeground(QColor("#176d45"));
     setStyleSheet("background-color: #1e2229; color: #176d45;");
 
     createHistoryFileIfNeeded();
@@ -24,21 +21,29 @@ TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     insertPrompt();
 }
 
+QTextCharFormat TerminalTextEdit::getDefaultCharFormat() const
+{
+    return defaultCharFormat;
+}
+
 void TerminalTextEdit::insertPrompt()
 {
-    moveCursor(QTextCursor::End);
     QTextCursor cursor = textCursor();
-
-    cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
-    QString line = cursor.selectedText();
-
-    if (line.trimmed().isEmpty()) {
-        cursor.movePosition(QTextCursor::End);
-        setTextCursor(cursor);
-        insertPlainText(prompt);
-    }
-
+    cursor.movePosition(QTextCursor::End);
+    cursor.setCharFormat(defaultCharFormat);
+    cursor.insertBlock();
+    cursor.insertText(prompt, defaultCharFormat);
+    setTextCursor(cursor);
     ensureCursorVisible();
+}
+
+void TerminalTextEdit::appendOutput(const QString &text)
+{
+    QTextCursor cursor = textCursor();
+    cursor.movePosition(QTextCursor::End);
+    cursor.setCharFormat(defaultCharFormat);
+    cursor.insertText(text);
+    setTextCursor(cursor);
 }
 
 void TerminalTextEdit::scrollToBottom()
@@ -58,13 +63,6 @@ QString TerminalTextEdit::getCurrentCommand() const
 
 void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
 {
-    // Reset completion state if the key is not Tab
-    if (event->key() != Qt::Key_Tab) {
-        completionMatches.clear();
-        completionIndex = -1;
-        completionPrefix = "";
-    }
-
     QTextCursor cursor = textCursor();
     cursor.movePosition(QTextCursor::End);
     setTextCursor(cursor);
@@ -116,6 +114,7 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
             return;
         }
         QTextEdit::keyPressEvent(event);
+        highlightCommand();
     }
     else if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_C) {
         emit interruptRequested();
@@ -127,10 +126,8 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
     }
     else {
         QTextEdit::keyPressEvent(event);
+        highlightCommand();
     }
-
-    // Highlight the command after processing the key event
-    highlightCommand();
 }
 
 void TerminalTextEdit::highlightCommand()
@@ -147,9 +144,9 @@ void TerminalTextEdit::highlightCommand()
         bool valid = isValidCommand(commandName);
         QTextCharFormat format;
         if (valid) {
-            format.setForeground(QColor("#44853a")); // Valid command color
+            format.setForeground(QColor("#44853a")); // Green for valid
         } else {
-            format.setForeground(QColor("#bc352a")); // Invalid command color
+            format.setForeground(QColor("#bc352a")); // Red for invalid
         }
         cursor.setPosition(startPos);
         cursor.movePosition(QTextCursor::NextWord, QTextCursor::KeepAnchor);
@@ -186,7 +183,6 @@ void TerminalTextEdit::handleTabCompletion()
     QString line = cursor.selectedText();
     QString currentInput = line.mid(prompt.length());
 
-    // Insert tab if input is empty or only spaces
     if (currentInput.trimmed().isEmpty()) {
         insertPlainText("\t");
         return;
@@ -195,74 +191,22 @@ void TerminalTextEdit::handleTabCompletion()
     QStringList parts = currentInput.split(' ', Qt::SkipEmptyParts);
     QString prefix = parts.isEmpty() ? "" : parts.last();
 
-    if (!completionMatches.isEmpty() && completionPrefix == prefix) {
-        // Cycle to next match
-        completionIndex = (completionIndex + 1) % completionMatches.size();
-        QString nextMatch = completionMatches[completionIndex];
-        parts[parts.size() - 1] = nextMatch;
-        QString newLine = parts.join(' ');
-        cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-        cursor.insertText(prompt + newLine);
-    } else {
-        // Find new matches
-        completionMatches = findCompletions(prefix);
-        if (completionMatches.isEmpty()) {
-            return;
-        } else if (completionMatches.size() == 1) {
-            parts[parts.size() - 1] = completionMatches.first();
-            QString newLine = parts.join(' ');
-            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-            cursor.insertText(prompt + newLine);
-            completionMatches.clear();
-            completionIndex = -1;
-            completionPrefix = "";
-        } else {
-            completionPrefix = prefix;
-            completionIndex = 0;
-            parts[parts.size() - 1] = completionMatches.first();
-            QString newLine = parts.join(' ');
-            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-            cursor.insertText(prompt + newLine);
+    QStringList matches = findCompletions(prefix);
+    if (matches.size() == 1) {
+        parts.removeLast();
+        parts.append(matches.first());
+        QString completedLine = parts.join(' ');
+        cursor.insertText(prompt + completedLine);
+
+        if (completedLine != getCurrentCommand()) {
+            commandHistory.append(completedLine);
+            historyIndex = commandHistory.size();
+            saveHistory();
         }
+    } else if (matches.size() > 1) {
+        appendOutput("\n" + matches.join("  "));
+        appendPrompt();
     }
-}
-
-QStringList TerminalTextEdit::findCompletions(const QString &prefix)
-{
-    QStringList matches;
-
-    // Check built-in commands
-    static QStringList builtInCommands = {"cd", "clear"};
-    for (const QString &cmd : builtInCommands) {
-        if (cmd.startsWith(prefix)) {
-            matches.append(cmd);
-        }
-    }
-
-    // Check PATH
-    QString pathEnv = QProcessEnvironment::systemEnvironment().value("PATH");
-    QStringList paths = pathEnv.split(':');
-    for (const QString &dir : paths) {
-        QDir d(dir);
-        QStringList files = d.entryList(QDir::Files | QDir::Executable);
-        for (const QString &file : files) {
-            if (file.startsWith(prefix) && !matches.contains(file)) {
-                matches.append(file);
-            }
-        }
-    }
-
-    // Check current directory
-    QDir currentDir = QDir::current();
-    QStringList localFiles = currentDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
-    for (const QString &file : localFiles) {
-        if (file.startsWith(prefix) && !matches.contains(file)) {
-            matches.append(file);
-        }
-    }
-
-    matches.sort();
-    return matches;
 }
 
 void TerminalTextEdit::loadHistory()
@@ -319,6 +263,32 @@ void TerminalTextEdit::mouseReleaseEvent(QMouseEvent *event)
 {
     selectingText = false;
     QTextEdit::mouseReleaseEvent(event);
+}
+
+QStringList TerminalTextEdit::findCompletions(const QString &prefix)
+{
+    QStringList matches;
+
+    QString pathEnv = qgetenv("PATH");
+    QStringList paths = pathEnv.split(':');
+    for (const QString &dir : paths) {
+        QDir d(dir);
+        QStringList files = d.entryList(QDir::Files | QDir::Executable);
+        for (const QString &file : files) {
+            if (file.startsWith(prefix) && !matches.contains(file))
+                matches.append(file);
+        }
+    }
+
+    QDir currentDir = QDir::current();
+    QStringList localFiles = currentDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+    for (const QString &file : localFiles) {
+        if (file.startsWith(prefix) && !matches.contains(file))
+            matches.append(file);
+    }
+
+    matches.sort();
+    return matches;
 }
 
 void TerminalTextEdit::appendPrompt()

@@ -8,6 +8,9 @@ class TerminalTextEdit : public QTextEdit
     Q_OBJECT
 public:
     explicit TerminalTextEdit(QWidget *parent = nullptr);
+    QTextCharFormat getDefaultCharFormat() const;
+    void insertPrompt();
+    void appendOutput(const QString &text);
 
 signals:
     void commandEntered(const QString &command);
@@ -20,7 +23,6 @@ protected:
     void showCustomContextMenu(const QPoint &pos);
 
 private:
-    void insertPrompt();
     void scrollToBottom();
     QString getCurrentCommand() const;
     void loadHistory();
@@ -38,9 +40,7 @@ private:
     const int MaxHistorySize = 100;
     const QString HistoryFileName = "history.txt";
     bool selectingText = false;
-    QStringList completionMatches;
-    int completionIndex = -1;
-    QString completionPrefix;
+    QTextCharFormat defaultCharFormat;
 };
 
 #endif // TERMINALTEXTEDIT_H

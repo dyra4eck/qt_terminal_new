@@ -14,8 +14,6 @@ MainWindow::MainWindow(QWidget *parent) :
     TerminalTextEdit *terminal = new TerminalTextEdit(this);
     setCentralWidget(terminal);
 
-    // terminal->append(">>> ");
-
     connect(terminal, &TerminalTextEdit::commandEntered, this, &MainWindow::onCommandEntered);
     connect(terminal, &TerminalTextEdit::interruptRequested, this, &MainWindow::handleInterrupt);
 }
@@ -36,22 +34,33 @@ void MainWindow::handleInterrupt()
 
     if (currentProcess && currentProcess->state() == QProcess::Running) {
         currentProcess->kill();
-        terminal->append("^C\n");
+        terminal->appendOutput("^C\n");
         currentProcess = nullptr;
     }
+    terminal->insertPrompt();
 }
 
 void MainWindow::executeCommand(const QString &command)
 {
     TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit *>(centralWidget());
 
+    QTextCursor cursor = terminal->textCursor();
+    cursor.movePosition(QTextCursor::PreviousBlock);
+    cursor.movePosition(QTextCursor::StartOfBlock);
+    cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+    cursor.setCharFormat(terminal->getDefaultCharFormat());
+    cursor.movePosition(QTextCursor::End);
+    terminal->setTextCursor(cursor);
+
     QStringList parts = command.split(" ", Qt::SkipEmptyParts);
     if (parts.isEmpty()) {
+        terminal->insertPrompt();
         return;
     }
 
     QString program = parts[0];
     QStringList arguments = parts.mid(1);
+
 
     if (program == "sudo") {
         arguments.prepend("-S");
@@ -60,20 +69,19 @@ void MainWindow::executeCommand(const QString &command)
 
     if (program == "cd") {
         runCdCommand(arguments);
-        terminal->append(">>> ");
+        terminal->insertPrompt();
         return;
     }
 
     if (program == "clear") {
         terminal->clear();
-        terminal->append(">>> ");
+        terminal->insertPrompt();
         return;
     }
 
     if (currentProcess) {
-        terminal->append("Error: Another command is still running.\n");
-        // currentProcess->kill();
-        terminal->append(">>> ");
+        terminal->appendOutput("Error: Another command is still running.\n");
+        terminal->insertPrompt();
         return;
     }
 
@@ -81,20 +89,18 @@ void MainWindow::executeCommand(const QString &command)
     currentProcess->setProgram(program);
     currentProcess->setArguments(arguments);
 
-    currentProcess->setProcessChannelMode(QProcess::MergedChannels);
-
     connect(currentProcess, &QProcess::readyReadStandardOutput, [=]() {
         QByteArray output = currentProcess->readAllStandardOutput();
-        terminal->append(QString::fromLocal8Bit(output));
+        terminal->appendOutput(QString::fromLocal8Bit(output));
     });
 
     connect(currentProcess, &QProcess::readyReadStandardError, [=]() {
         QByteArray error = currentProcess->readAllStandardError();
-        terminal->append(QString::fromLocal8Bit(error));
+        terminal->appendOutput(QString::fromLocal8Bit(error));
     });
 
     connect(currentProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int, QProcess::ExitStatus) {
-        terminal->append(">>> ");
+        terminal->insertPrompt();
         currentProcess->deleteLater();
         currentProcess = nullptr;
     });
@@ -113,14 +119,14 @@ void MainWindow::executeCommand(const QString &command)
             QLineEdit::Password
             );
         if (!password.isEmpty()) {
-            password += "\n"; // Перевод строки для подтверждения
+            password += "\n";
             currentProcess->write(password.toUtf8());
         }
     }
 
     if (!currentProcess->waitForStarted()) {
-        terminal->append("Error: Could not start command: " + program + "\n");
-        terminal->append(">>> ");
+        terminal->appendOutput("Error: Could not start command: " + program + "\n");
+        terminal->insertPrompt();
         currentProcess->deleteLater();
         currentProcess = nullptr;
     }
@@ -144,8 +150,8 @@ void MainWindow::runCdCommand(const QStringList &arguments)
     bool success = dir.cd(path);
     if (success) {
         QDir::setCurrent(dir.absolutePath());
-        terminal->append("Changed directory to: " + dir.absolutePath()+ "\n");
+        terminal->appendOutput("Changed directory to: " + dir.absolutePath() + "\n");
     } else {
-        terminal->append("cd: no such directory: " + path + "\n");
+        terminal->appendOutput("cd: no such directory: " + path + "\n");
     }
 }

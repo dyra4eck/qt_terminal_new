@@ -31,7 +31,6 @@ private:
     void runPwdCommand(const QString &);
     void runEchoCommand(const QString &);
     void printUnknownCommand(const QString &);
-    // void runCdCommand(const QString &);
     void runCdCommand(const QStringList &arguments);
     void runClearCommand(const QString &);
 };
