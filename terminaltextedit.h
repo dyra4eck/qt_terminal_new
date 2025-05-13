@@ -2,6 +2,7 @@
 #define TERMINALTEXTEDIT_H
 
 #include <QTextEdit>
+#include <QDir>
 
 class TerminalTextEdit : public QTextEdit
 {
@@ -36,7 +37,7 @@ private:
 
     QStringList commandHistory;
     int historyIndex = 0;
-    const QString prompt = ">>> ";
+    QString prompt = QDir::currentPath() +"$ ";
     const int MaxHistorySize = 100;
     const QString HistoryFileName = "history.txt";
     bool selectingText = false;

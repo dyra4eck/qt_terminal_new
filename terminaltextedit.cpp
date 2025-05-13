@@ -32,6 +32,7 @@ void TerminalTextEdit::insertPrompt()
     cursor.movePosition(QTextCursor::End);
     cursor.setCharFormat(defaultCharFormat);
     cursor.insertBlock();
+    prompt = QDir::currentPath() + "$ ";
     cursor.insertText(prompt, defaultCharFormat);
     setTextCursor(cursor);
     ensureCursorVisible();

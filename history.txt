@@ -3,5 +3,84 @@ ls -l
 cd ..
 ls -l
 cd ..
+python3 --version
+sudo pacman -Syu
+ls
+sudo pacman -Syu
+ls
+cat history.txt
+lvm
+as
+a
+a
+as
+as
+cs
+cc
+aa
+ls -l
+cd ..
+ls
+sudo pacman -Syu
+ls -l
+ls -l
+sd
+ls
+;ls
+ls
+>>> ls
+ls -l
+ls
+c
+ls
+sudo pacman -Syu
+ls
+ls -l
+e
+e
+ls
+ls -l
+cd
+ls
+ls -l
+cd ..
+ls
+cd
+ls
+ca
+asd
+a
+ls
+ls -l
+c
+ls
+ls -l
+c
+ls
+ls -l
+ls
+ls -l
+sd
+sudo pacman -Syu
+ls
+ls -l
+sudo pacman -Syu
+o
+clear
+ls
+ls -l
+l
+sudo pacman -Syu
+ls
+ls -l
+sudo pacman -Syu
+ls -l
+ls -l
 cd ..
 cd ..
+ls
+cd ..
+ls
+cd ..
+ls
+cd build
