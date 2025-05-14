@@ -175,6 +175,7 @@ void MainWindow::runCdCommand(const QStringList &arguments)
     bool success = dir.cd(path);
     if (success) {
         QDir::setCurrent(dir.absolutePath());
+        terminal->prompt = QDir::currentPath() + "$ ";
         terminal->appendOutput("Changed directory to: " + dir.absolutePath() + "\n");
     } else {
         terminal->appendOutput("cd: no such directory: " + path + "\n");

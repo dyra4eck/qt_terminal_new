@@ -16,6 +16,7 @@ public:
     void highlightCommand();
     QString lastPrompt;
     QString getPartialInput() const;
+    QString prompt = QDir::currentPath() +"$ ";
 
 signals:
     void commandEntered(const QString &command);
@@ -39,7 +40,6 @@ private:
 
     QStringList commandHistory;
     int historyIndex = 0;
-    QString prompt = QDir::currentPath() +"$ ";
     const int MaxHistorySize = 100;
     const QString HistoryFileName = "history.txt";
     bool selectingText = false;

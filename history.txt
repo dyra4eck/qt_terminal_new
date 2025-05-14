@@ -1,86 +1,100 @@
+sleep 5
+sleep 5
+sleep 5 $
+sleep 5 &
+sleep 5
 ls
-ls -l
-cd ..
-ls -l
-cd ..
-python3 --version
-sudo pacman -Syu
 ls
-sudo pacman -Syu
-ls
-cat history.txt
-lvm
-as
 a
-a
-as
-as
-cs
-cc
-aa
+sleep 5
+sleep 5 &
+sleep 5 &
+sleep 5
+sleep 5 &
+sleep 5 &
+sleep 5
+ls
+ls -l
+sleep 5
+sleep 5 &
+ls
+ls -
+ls -l
+sleep 5
+sleep 5 &
+ls
+ls -l
+sleep 5
+sleep 5 &
+sleep 5
+a/home/surefeur/Downloads/qt_terminal_new-timo/build/Desktop_Qt_6_9_0-Debug$ /home/surefeur/Downloads/qt_terminal_new-timo/build/Desktop_Qt_6_9_0-Debug$ /home/surefeur/Downloads/qt_terminal_new-timo/build/Desktop_Qt_6_9_0-Debug$ /home/surefeur/Downloads/qt_terminal_new-timo/build/Desktop_Qt_6_9_0-Debug$
+/home/surefeur/Downloads/qt_terminal_new-timo/build/Desktop_Qt_6_9_0-Debug$ /home/surefeur/Downloads/qt_terminal_new-timo/build/Desktop_Qt_6_9_0-Debug$ /home/surefeur/Downloads/qt_terminal_new-timo/build/Desktop_Qt_6_9_0-Debug$
+sudo pacman -Syu
+sudo pacman -Syu
+git add .
+git branch
+git commit
+git commit -a
+ls -l
+ls
+ls
 ls -l
 cd ..
 ls
-sudo pacman -Syu
-ls -l
-ls -l
-sd
+cd ..
 ls
-;ls
+cd main.o
 ls
->>> ls
+cd ..
+ls
+ls
 ls -l
+a
+cd ..
+sleep 5
+sleep 5 &
 ls
+ls -l
+sleep 5
+sleep 5 &
 c
 ls
-sudo pacman -Syu
-ls
 ls -l
-e
-e
-ls
-ls -l
-cd
+sleep 5 &
+cd ..
 ls
 ls -l
 cd ..
-ls
-cd
-ls
-ca
-asd
-a
-ls
-ls -l
-c
-ls
-ls -l
-c
-ls
-ls -l
-ls
-ls -l
-sd
-sudo pacman -Syu
-ls
-ls -l
-sudo pacman -Syu
-o
-clear
-ls
-ls -l
-l
-sudo pacman -Syu
-ls
-ls -l
-sudo pacman -Syu
-ls -l
+cd ..
 ls -l
 cd ..
+sleep 5
 cd ..
+sleep 5
+sleep 5 &
+cd ..
+sc
+sleep 5
+sleep 5 &
+ls
+ls -l
+sleep 5
+sleep 5
+cd ..
+sleep 5
+sleep 5 &
+ls
+cd ..
+sleep 5
+ls
+sleep 5
 ls
 cd ..
 ls
 cd ..
+ls -l
+cd ..
+cd ..
 ls
-cd build
+sleep 5
+sleep 5 &
