@@ -13,8 +13,8 @@ TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     setAcceptRichText(false);
     setCursorWidth(2);
 
-    defaultCharFormat.setForeground(QColor("#176d45"));
-    setStyleSheet("background-color: #1e2229; color: #176d45;");
+    defaultCharFormat.setForeground(QColor("#179a7e"));
+    setStyleSheet("background-color: #1e2229; color: #179a7e;");
 
     createHistoryFileIfNeeded();
     loadHistory();
